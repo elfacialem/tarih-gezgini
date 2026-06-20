@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarih Gezgini — Türkiye'nin Tarihi Yerlerini Keşfet</title>
+<meta name="description" content="Türkiye'nin tarihi yerlerini keşfet, gezdiklerini işaretle, rota oluştur.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --card2: #232736;
+  --border: #2e3347;
+  --text: #e8e6f0;
+  --dim: #7a7f99;
+  --gold: #c9a84c;
+  --gold2: #f0c060;
+  --green: #3dba7c;
+  --red: #e05c5c;
+  --blue: #4a90d9;
+  --purple: #8b7ec8;
+  --orange: #e07c3c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* AUTH */
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at top, #1a1030 0%, #0f1117 60%);
+  padding: 20px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.auth-header {
+  background: linear-gradient(135deg, #1a1030, #2a1a50);
+  padding: 32px 28px 24px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.auth-logo { font-size: 40px; margin-bottom: 8px; }
+.auth-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--gold2); }
+.auth-sub { font-size: 13px; color: var(--dim); margin-top: 4px; }
+.auth-body { padding: 28px; }
+.auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.auth-tab {
+  flex: 1; padding: 10px; background: transparent; border: none;
+  border-bottom: 2px solid transparent; color: var(--dim);
+  cursor: pointer; font-size: 14px; font-weight: 500; transition: all .2s;
+}
+.auth-tab.active { color: var(--gold2); border-bottom-color: var(--gold2); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.form-group input {
+  width: 100%; padding: 11px 14px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 14px; transition: border .2s;
+}
+.form-group input:focus { outline: none; border-color: var(--gold); }
+.btn-auth {
+  width: 100%; padding: 13px; background: linear-gradient(135deg, var(--gold), var(--gold2));
+  border: none; border-radius: 8px; color: #1a1030;
+  font-size: 15px; font-weight: 700; cursor: pointer; letter-spacing: .5px;
+}
+.btn-auth:hover { opacity: .9; }
+.auth-msg { font-size: 12px; text-align: center; margin-top: 10px; display: none; }
+
+/* APP */
+#app { display: none; flex-direction: column; min-height: 100vh; }
+
+/* NAVBAR */
+.navbar {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.nav-brand-icon { font-size: 22px; }
+.nav-brand-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold2); }
+.nav-links { display: flex; gap: 4px; }
+.nav-link {
+  padding: 7px 14px; border-radius: 8px; border: none;
+  background: transparent; color: var(--dim);
+  cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s;
+}
+.nav-link:hover, .nav-link.active { background: var(--card2); color: var(--text); }
+.nav-link.active { color: var(--gold2); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-user { font-size: 13px; color: var(--dim); }
+.btn-cikis {
+  padding: 6px 12px; background: transparent; border: 1px solid var(--border);
+  border-radius: 6px; color: var(--dim); cursor: pointer; font-size: 12px;
+}
+.btn-cikis:hover { color: var(--red); border-color: var(--red); }
+
+/* PAGES */
+.page { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+.page.active { display: block; }
+
+/* STATS */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: transform .2s;
+}
+.stat-box:hover { transform: translateY(-2px); }
+.stat-box .icon { font-size: 28px; margin-bottom: 8px; }
+.stat-box .num { font-size: 28px; font-weight: 700; color: var(--gold2); }
+.stat-box .lbl { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+/* HAR İTA */
+#map { height: 550px; border-radius: 12px; border: 1px solid var(--border); }
+
+/* FİLTRELER */
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.filter-btn {
+  padding: 7px 14px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card); color: var(--dim);
+  cursor: pointer; font-size: 13px; transition: all .2s;
+}
+.filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+.filter-btn.active { background: var(--gold); border-color: var(--gold); color: #1a1030; font-weight: 600; }
+
+/* YER LİSTESİ */
+.yer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.yer-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.yer-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.yer-card.gezildi { border-color: var(--green); }
+.yer-card.gezildi::after {
+  content: '✓';
+  position: absolute; top: 12px; right: 12px;
+  background: var(--green); color: white;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.yer-kat {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--gold); margin-bottom: 6px; font-weight: 600;
+}
+.yer-ad { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.yer-il { font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+.yer-donem {
+  display: inline-block; font-size: 11px; padding: 3px 8px;
+  background: var(--card2); border-radius: 4px; color: var(--purple);
+}
+.yer-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn-gezildi {
+  flex: 1; padding: 8px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--dim); cursor: pointer; font-size: 12px; transition: all .2s;
+}
+.btn-gezildi:hover { background: var(--green); border-color: var(--green); color: white; }
+.btn-gezildi.gezildi-btn { background: var(--green); border-color: var(--green); color: white; }
+.btn-detay {
+  padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--dim); cursor: pointer; font-size: 12px; transition: all .2s;
+}
+.btn-detay:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ARAMA */
+.search-box {
+  position: relative; margin-bottom: 16px;
+}
+.search-box input {
+  width: 100%; padding: 11px 16px 11px 40px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 14px;
+}
+.search-box input:focus { outline: none; border-color: var(--gold); }
+.search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 16px; color: var(--dim);
+}
+
+/* ROZET */
+.rozetler { display: flex; flex-wrap: wrap; gap: 12px; }
+.rozet {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex; align-items: center; gap: 12px;
+  min-width: 200px;
+}
+.rozet.kazanildi { border-color: var(--gold); background: rgba(201, 168, 76, 0.08); }
+.rozet.kazanilmadi { opacity: .5; filter: grayscale(1); }
+.rozet-icon { font-size: 32px; }
+.rozet-ad { font-size: 14px; font-weight: 600; }
+.rozet-aciklama { font-size: 12px; color: var(--dim); margin-top: 2px; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 2000;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: var(--card); z-index: 1;
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-close { background: transparent; border: none; color: var(--dim); font-size: 22px; cursor: pointer; }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+/* PROGRESS BAR */
+.progress-wrap { margin-bottom: 24px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+.progress-bar { height: 8px; background: var(--card2); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--gold), var(--gold2)); transition: width .5s; }
+
+/* İL HARİTASI */
+.il-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.il-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; text-align: center;
+  cursor: pointer; transition: all .2s;
+}
+.il-box:hover { border-color: var(--gold); }
+.il-box.gezildi { border-color: var(--green); background: rgba(61,186,124,.08); }
+.il-box .il-ad { font-size: 13px; font-weight: 600; }
+.il-box .il-sayi { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+/* ROTA */
+.rota-list { display: flex; flex-direction: column; gap: 12px; }
+.rota-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+}
+.rota-ad { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.rota-meta { font-size: 12px; color: var(--dim); }
+.rota-yerler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rota-yer-tag {
+  font-size: 11px; padding: 4px 10px;
+  background: var(--card2); border-radius: 4px; color: var(--text);
+}
+
+/* Leaflet marker renkleri */
+.marker-gezildi { filter: hue-rotate(100deg); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar { padding: 0 12px; }
+  .nav-brand-title { font-size: 15px; }
+  .nav-links { display: none; }
+  .page { padding: 12px; }
+  #map { height: 350px; }
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">🏛️</div>
+      <div class="auth-title">Tarih Gezgini</div>
+      <div class="auth-sub">Türkiye'nin tarihi yerlerini keşfet</div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('giris')">Giriş Yap</button>
+        <button class="auth-tab" onclick="switchAuthTab('kayit')">Kayıt Ol</button>
+      </div>
+      <div id="form-giris">
+        <div class="form-group"><label>E-posta</label><input type="email" id="giris-email" placeholder="mail@ornek.com" onkeydown="if(event.key==='Enter')girisYap()"></div>
+        <div class="form-group"><label>Şifre</label><input type="password" id="giris-sifre" placeholder="••••••••" onkeydown="if(event.key==='Enter')girisYap()"></div>
+        <button class="btn-auth" onclick="girisYap()">🔑 GİRİŞ YAP</button>
+        <div class="auth-msg" id="giris-msg"></div>
+      </div>
+      <div id="form-kayit" style="display:none;">
+        <div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="kayit-ad" placeholder="GezginAli"></div>
+        <div class="form-group"><label>E-posta</label><input type="email" id="kayit-email" placeholder="mail@ornek.com"></div>
+        <div class="form-group"><label>Şifre</label><input type="password" id="kayit-sifre" placeholder="En az 6 karakter"></div>
+        <button class="btn-auth" onclick="kayitOl()">🚀 KAYIT OL</button>
+        <div class="auth-msg" id="kayit-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="navbar">
+    <div class="nav-brand" onclick="showPage('kesfet')">
+      <span class="nav-brand-icon">🏛️</span>
+      <span class="nav-brand-title">Tarih Gezgini</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-link active" onclick="showPage('kesfet')">🗺️ Harita</button>
+      <button class="nav-link" onclick="showPage('yerler')">📋 Yerler</button>
+      <button class="nav-link" onclick="showPage('profil')">📊 Profilim</button>
+      <button class="nav-link" onclick="showPage('rozetler')">🏅 Rozetler</button>
+      <button class="nav-link" onclick="showPage('rotalar')">🧭 Rotalar</button>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-user"></span>
+      <button class="btn-cikis" onclick="cikis()">Çıkış</button>
+    </div>
+  </nav>
+
+  <!-- HARİTA SAYFASI -->
+  <div class="page active" id="page-kesfet">
+    <div class="stats-row" id="mini-stats"></div>
+    <div class="filters" id="harita-filtreler"></div>
+    <div id="map"></div>
+  </div>
+
+  <!-- YERLER SAYFASI -->
+  <div class="page" id="page-yerler">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Yer ara... (Efes, İzmir, antik kent...)" id="yer-arama" oninput="renderYerler()">
+    </div>
+    <div class="filters" id="yer-filtreler"></div>
+    <div style="color:var(--dim);font-size:13px;margin-bottom:12px;" id="yer-sayac"></div>
+    <div class="yer-grid" id="yer-grid"></div>
+  </div>
+
+  <!-- PROFİL -->
+  <div class="page" id="page-profil">
+    <div class="stats-row" id="profil-stats"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px;">
+      <div>
+        <h3 style="margin-bottom:16px;color:var(--gold2);">📊 Kategori İlerlemesi</h3>
+        <div id="kategori-ilerleme"></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:16px;color:var(--gold2);">🗺️ Gezilen İller</h3>
+        <div class="il-grid" id="il-grid"></div>
+      </div>
+    </div>
+    <div style="margin-top:24px;">
+      <h3 style="margin-bottom:16px;color:var(--gold2);">🔧 Son Ziyaretler</h3>
+      <div id="son-ziyaretler"></div>
+    </div>
+  </div>
+
+  <!-- ROZETLER -->
+  <div class="page" id="page-rozetler">
+    <h2 style="margin-bottom:20px;color:var(--gold2);">🏅 Rozetlerim</h2>
+    <div class="rozetler" id="rozet-grid"></div>
+  </div>
+
+  <!-- ROTALAR -->
+  <div class="page" id="page-rotalar">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="color:var(--gold2);">🧭 Rotalarım</h2>
+      <button onclick="yeniRotaAc()" style="padding:10px 18px;background:var(--gold);border:none;border-radius:8px;color:#1a1030;font-weight:700;cursor:pointer;">+ Yeni Rota</button>
+    </div>
+    <div class="rota-list" id="rota-list"></div>
+  </div>
+</div>
+
+<!-- YER DETAY MODALı -->
+<div class="modal-overlay" id="yerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-yer-ad">Yer Detayı</div>
+      <button class="modal-close" onclick="closeModal('yerModal')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-yer-body"></div>
+    <div class="modal-footer">
+      <button onclick="closeModal('yerModal')" style="padding:10px 18px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--dim);cursor:pointer;">Kapat</button>
+      <button id="modal-gezildi-btn" onclick="modalGezildiToggle()" style="padding:10px 18px;background:var(--green);border:none;border-radius:8px;color:white;font-weight:600;cursor:pointer;">✓ Gezildi İşaretle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROTA MODAL -->
+<div class="modal-overlay" id="rotaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🧭 Yeni Rota</div>
+      <button class="modal-close" onclick="closeModal('rotaModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Rota Adı</label><input type="text" id="rota-ad" placeholder="Ege Antik Kentleri Turu"></div>
+      <div class="form-group"><label>Açıklama</label><input type="text" id="rota-aciklama" placeholder="7 günlük rota..."></div>
+      <div style="margin-top:12px;">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">YERLERİ SEÇ (sırayla tıkla):</div>
+        <div style="max-height:300px;overflow-y:auto;" id="rota-yer-secim"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('rotaModal')" style="padding:10px 18px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--dim);cursor:pointer;">İptal</button>
+      <button onclick="rotaKaydet()" style="padding:10px 18px;background:var(--gold);border:none;border-radius:8px;color:#1a1030;font-weight:700;cursor:pointer;">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://yifpsninkjqbsqugdctw.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZnBzbmlua2pxYnNxdWdkY3R3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDU3MTEsImV4cCI6MjA5NzQ4MTcxMX0.UUmrICYHQaQOlgS8trnS0vnNZmP4P11gvZ7WoRBkxZU';
+
+let currentUser = null;
+let tumYerler = [];
+let ziyaretler = [];
+let rotalar = [];
+let aktifKategori = 'tümü';
+let seciliRotaYerler = [];
+let modalYerId = null;
+let map = null;
+let markers = {};
+
+// ── SUPABASE ──────────────────────────────────────────────────────────────
+async function sbFetch(path, method = 'GET', body = null, extra = '') {
+  const token = localStorage.getItem('sb_token') || SB_KEY;
+  const headers = {
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + token,
+    'Content-Type': 'application/json'
+  };
+  if (method === 'POST') headers['Prefer'] = 'resolution=merge-duplicates';
+  const url = SB_URL + '/rest/v1/' + path + (extra ? '?' + extra : '');
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(url, opts);
+    if (!res.ok) { console.error('SB Error:', res.status, await res.text()); return null; }
+    const text = await res.text();
+    return text ? JSON.parse(text) : true;
+  } catch(e) { console.error('Fetch error:', e); return null; }
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.getElementById('form-giris').style.display = tab === 'giris' ? 'block' : 'none';
+  document.getElementById('form-kayit').style.display = tab === 'kayit' ? 'block' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0) === (tab==='giris')));
+}
+
+function showMsg(elId, msg, color) {
+  const el = document.getElementById(elId);
+  el.textContent = msg; el.style.color = color; el.style.display = 'block';
+}
+
+async function girisYap() {
+  const email = document.getElementById('giris-email').value.trim();
+  const sifre = document.getElementById('giris-sifre').value;
+  if (!email || !sifre) { showMsg('giris-msg', 'E-posta ve şifre girin', 'var(--red)'); return; }
+  const res = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: sifre })
+  });
+  const d = await res.json();
+  if (!res.ok) { showMsg('giris-msg', 'E-posta veya şifre hatalı', 'var(--red)'); return; }
+  localStorage.setItem('sb_token', d.access_token);
+  localStorage.setItem('sb_refresh', d.refresh_token);
+  localStorage.setItem('sb_user', JSON.stringify(d.user));
+  currentUser = d.user;
+  appBaslat();
+}
+
+async function kayitOl() {
+  const ad = document.getElementById('kayit-ad').value.trim();
+  const email = document.getElementById('kayit-email').value.trim();
+  const sifre = document.getElementById('kayit-sifre').value;
+  if (!ad || !email || !sifre) { showMsg('kayit-msg', 'Tüm alanları doldurun', 'var(--red)'); return; }
+  if (sifre.length < 6) { showMsg('kayit-msg', 'Şifre en az 6 karakter', 'var(--red)'); return; }
+  const res = await fetch(SB_URL + '/auth/v1/signup', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: sifre, data: { kullanici_adi: ad } })
+  });
+  const d = await res.json();
+  if (!res.ok) { showMsg('kayit-msg', d.error_description || 'Kayıt hatası', 'var(--red)'); return; }
+  if (d.access_token) {
+    localStorage.setItem('sb_token', d.access_token);
+    localStorage.setItem('sb_refresh', d.refresh_token);
+    localStorage.setItem('sb_user', JSON.stringify(d.user));
+    currentUser = d.user;
+    // Profil oluştur
+    await sbFetch('profiller', 'POST', { id: d.user.id, kullanici_adi: ad });
+    appBaslat();
+  } else {
+    showMsg('kayit-msg', '✅ Kayıt başarılı! Giriş yapabilirsiniz.', 'var(--green)');
+  }
+}
+
+function cikis() {
+  localStorage.removeItem('sb_token');
+  localStorage.removeItem('sb_refresh');
+  localStorage.removeItem('sb_user');
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+async function oturumKontrol() {
+  const token = localStorage.getItem('sb_token');
+  const savedUser = localStorage.getItem('sb_user');
+  if (token && savedUser) {
+    try {
+      const res = await fetch(SB_URL + '/auth/v1/user', {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        currentUser = JSON.parse(savedUser);
+        appBaslat();
+        return;
+      }
+    } catch(e) {}
+  }
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────
+async function appBaslat() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const ad = currentUser?.user_metadata?.kullanici_adi || currentUser?.email?.split('@')[0] || 'Gezgin';
+  document.getElementById('nav-user').textContent = '👤 ' + ad;
+
+  // Verileri yükle
+  const [yerData, ziyData, rotData] = await Promise.all([
+    sbFetch('yerler', 'GET', null, 'select=*&order=ad.asc'),
+    sbFetch('ziyaretler', 'GET', null, 'select=*&user_id=eq.' + currentUser.id),
+    sbFetch('rotalar', 'GET', null, 'select=*&user_id=eq.' + currentUser.id)
+  ]);
+
+  tumYerler = yerData || [];
+  ziyaretler = ziyData || [];
+  rotalar = rotData || [];
+
+  renderFiltreler();
+  renderHarita();
+  renderMiniStats();
+  renderYerler();
+}
+
+function gezildiMi(yerId) {
+  return ziyaretler.some(z => z.yer_id === yerId);
+}
+
+// ── HARİTA ────────────────────────────────────────────────────────────────
+const katIkon = {
+  'müze': '🏛️', 'antik kent': '🏺', 'antik tiyatro': '🎭',
+  'kale': '🏰', 'kilise': '⛪', 'tapınak': '🗿',
+  'höyük': '⛰️', 'yeraltı şehri': '🕳️', 'doğal alan': '🌿',
+  'cami': '🕌', 'saray': '👑', 'türbe': '🪦',
+  'medrese': '📚', 'mağara': '🦇', 'mezarlık': '⚰️'
+};
+
+const katRenk = {
+  'müze': '#4a90d9', 'antik kent': '#c9a84c', 'antik tiyatro': '#8b7ec8',
+  'kale': '#e07c3c', 'kilise': '#7ec8a8', 'tapınak': '#d4a853',
+  'höyük': '#a0856a', 'yeraltı şehri': '#606070', 'doğal alan': '#3dba7c',
+  'cami': '#4db8a0', 'saray': '#d4a0c8', 'türbe': '#a08070',
+  'medrese': '#80a0c0', 'mağara': '#706080', 'mezarlık': '#808080'
+};
+
+function renderHarita() {
+  if (!map) {
+    map = L.map('map').setView([39.0, 35.0], 6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO'
+    }).addTo(map);
+  } else {
+    Object.values(markers).forEach(m => map.removeLayer(m));
+    markers = {};
+  }
+
+  const filtreli = aktifKategori === 'tümü' ? tumYerler : tumYerler.filter(y => y.kategori === aktifKategori);
+
+  filtreli.forEach(yer => {
+    if (!yer.lat || !yer.lng) return;
+    const gezildi = gezildiMi(yer.id);
+    const renk = gezildi ? '#3dba7c' : (katRenk[yer.kategori] || '#c9a84c');
+    const ikon = katIkon[yer.kategori] || '📍';
+
+    const divIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:${renk};
+        width:28px;height:28px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:14px;border:2px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,.4);
+        cursor:pointer;
+        ${gezildi ? 'box-shadow:0 0 0 3px rgba(61,186,124,.4),0 2px 6px rgba(0,0,0,.4);' : ''}
+      ">${ikon}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    const m = L.marker([yer.lat, yer.lng], { icon: divIcon }).addTo(map);
+    m.bindPopup(`
+      <div style="min-width:200px;font-family:Inter,sans-serif;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${yer.ad}</div>
+        <div style="font-size:12px;color:#888;margin-bottom:8px;">${yer.il} · ${yer.kategori} · ${yer.donem||''}</div>
+        <div style="font-size:12px;margin-bottom:10px;">${yer.aciklama||''}</div>
+        <button onclick="yerDetay(${yer.id})" style="
+          width:100%;padding:8px;background:#c9a84c;border:none;
+          border-radius:6px;color:#1a1030;font-weight:600;cursor:pointer;font-size:12px;
+        ">${gezildi ? '✓ Gezildi' : '+ Gezildi İşaretle'}</button>
+      </div>
+    `);
+    markers[yer.id] = m;
+  });
+}
+
+// ── FİLTRELER ─────────────────────────────────────────────────────────────
+function renderFiltreler() {
+  const kategoriler = ['tümü', ...new Set(tumYerler.map(y => y.kategori).filter(Boolean))];
+  const html = kategoriler.map(k => {
+    const ikon = k === 'tümü' ? '🗺️' : (katIkon[k] || '📍');
+    const sayi = k === 'tümü' ? tumYerler.length : tumYerler.filter(y => y.kategori === k).length;
+    return `<button class="filter-btn ${aktifKategori === k ? 'active' : ''}" onclick="setKategori('${k}')">
+      ${ikon} ${k} <span style="opacity:.7;">(${sayi})</span>
+    </button>`;
+  }).join('');
+
+  ['harita-filtreler', 'yer-filtreler'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function setKategori(k) {
+  aktifKategori = k;
+  renderFiltreler();
+  renderHarita();
+  renderYerler();
+}
+
+// ── MİNİ STATS ────────────────────────────────────────────────────────────
+function renderMiniStats() {
+  const gezilen = ziyaretler.length;
+  const toplam = tumYerler.length;
+  const iller = new Set(ziyaretler.map(z => tumYerler.find(y=>y.id===z.yer_id)?.il).filter(Boolean)).size;
+  const tiyatro = ziyaretler.filter(z => tumYerler.find(y=>y.id===z.yer_id)?.kategori === 'antik tiyatro').length;
+  const antikKent = ziyaretler.filter(z => tumYerler.find(y=>y.id===z.yer_id)?.kategori === 'antik kent').length;
+
+  document.getElementById('mini-stats').innerHTML = `
+    <div class="stat-box">
+      <div class="icon">🗺️</div>
+      <div class="num">${gezilen}</div>
+      <div class="lbl">Gezilen / ${toplam}</div>
+    </div>
+    <div class="stat-box">
+      <div class="icon">📍</div>
+      <div class="num">${iller}</div>
+      <div class="lbl">Farklı İl</div>
+    </div>
+    <div class="stat-box">
+      <div class="icon">🎭</div>
+      <div class="num">${tiyatro}</div>
+      <div class="lbl">Antik Tiyatro</div>
+    </div>
+    <div class="stat-box">
+      <div class="icon">🏺</div>
+      <div class="num">${antikKent}</div>
+      <div class="lbl">Antik Kent</div>
+    </div>
+    <div class="stat-box">
+      <div class="icon">📈</div>
+      <div class="num">${toplam > 0 ? Math.round(gezilen/toplam*100) : 0}%</div>
+      <div class="lbl">Tamamlandı</div>
+    </div>
+  `;
+}
+
+// ── YERLER LİSTESİ ────────────────────────────────────────────────────────
+function renderYerler() {
+  const q = (document.getElementById('yer-arama')?.value || '').toLowerCase();
+  let liste = tumYerler;
+  if (aktifKategori !== 'tümü') liste = liste.filter(y => y.kategori === aktifKategori);
+  if (q) liste = liste.filter(y =>
+    y.ad.toLowerCase().includes(q) ||
+    (y.il||'').toLowerCase().includes(q) ||
+    (y.kategori||'').toLowerCase().includes(q) ||
+    (y.donem||'').toLowerCase().includes(q)
+  );
+
+  document.getElementById('yer-sayac').textContent = liste.length + ' yer gösteriliyor';
+  document.getElementById('yer-grid').innerHTML = liste.map(yer => {
+    const gezildi = gezildiMi(yer.id);
+    return `<div class="yer-card ${gezildi ? 'gezildi' : ''}" onclick="yerDetay(${yer.id})">
+      <div class="yer-kat">${katIkon[yer.kategori]||'📍'} ${yer.kategori}</div>
+      <div class="yer-ad">${yer.ad}</div>
+      <div class="yer-il">📍 ${yer.il}${yer.ilce ? ', '+yer.ilce : ''}</div>
+      <div class="yer-donem">⏳ ${yer.donem||'Belirsiz'}</div>
+      <div class="yer-actions" onclick="event.stopPropagation()">
+        <button class="btn-gezildi ${gezildi ? 'gezildi-btn' : ''}" onclick="gezildiToggle(${yer.id})">
+          ${gezildi ? '✓ Gezildi' : '+ Gezdim'}
+        </button>
+        <button class="btn-detay" onclick="yerDetay(${yer.id})">Detay</button>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--dim);text-align:center;padding:40px;grid-column:1/-1;">Yer bulunamadı</div>';
+}
+
+// ── PROFİL ────────────────────────────────────────────────────────────────
+function renderProfil() {
+  const gezilen = ziyaretler.length;
+  const toplam = tumYerler.length;
+  const ad = currentUser?.user_metadata?.kullanici_adi || currentUser?.email?.split('@')[0];
+
+  // Stats
+  const katSayilar = {};
+  ziyaretler.forEach(z => {
+    const yer = tumYerler.find(y => y.id === z.yer_id);
+    if (yer) katSayilar[yer.kategori] = (katSayilar[yer.kategori]||0) + 1;
+  });
+  document.getElementById('profil-stats').innerHTML = `
+    <div class="stat-box" style="grid-column:span 2;">
+      <div class="icon">👤</div>
+      <div class="num" style="font-size:20px;">${ad}</div>
+      <div class="lbl">Toplam ${gezilen} yer gezildi</div>
+    </div>
+    ${Object.entries(katSayilar).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`
+      <div class="stat-box">
+        <div class="icon">${katIkon[k]||'📍'}</div>
+        <div class="num">${v}</div>
+        <div class="lbl">${k}</div>
+      </div>
+    `).join('')}
+  `;
+
+  // Kategori ilerleme
+  const kategoriler = [...new Set(tumYerler.map(y=>y.kategori).filter(Boolean))];
+  document.getElementById('kategori-ilerleme').innerHTML = kategoriler.map(k => {
+    const toplamK = tumYerler.filter(y=>y.kategori===k).length;
+    const gezK = ziyaretler.filter(z=>tumYerler.find(y=>y.id===z.yer_id)?.kategori===k).length;
+    const yuzde = toplamK > 0 ? Math.round(gezK/toplamK*100) : 0;
+    return `<div class="progress-wrap">
+      <div class="progress-label">
+        <span>${katIkon[k]||''} ${k}</span>
+        <span style="color:var(--gold2)">${gezK}/${toplamK}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${yuzde}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // İller
+  const gezK = {};
+  const toplamI = {};
+  tumYerler.forEach(y => { if(y.il) toplamI[y.il]=(toplamI[y.il]||0)+1; });
+  ziyaretler.forEach(z => {
+    const yer = tumYerler.find(y=>y.id===z.yer_id);
+    if (yer?.il) gezK[yer.il]=(gezK[yer.il]||0)+1;
+  });
+  document.getElementById('il-grid').innerHTML = Object.entries(toplamI).sort((a,b)=>b[1]-a[1]).map(([il,top])=>`
+    <div class="il-box ${gezK[il] ? 'gezildi' : ''}" onclick="filterByIl('${il}')">
+      <div class="il-ad">${il}</div>
+      <div class="il-sayi">${gezK[il]||0}/${top}</div>
+    </div>
+  `).join('');
+
+  // Son ziyaretler
+  const sonZiy = [...ziyaretler].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
+  document.getElementById('son-ziyaretler').innerHTML = sonZiy.map(z => {
+    const yer = tumYerler.find(y=>y.id===z.yer_id);
+    if (!yer) return '';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+      <span style="font-size:24px;">${katIkon[yer.kategori]||'📍'}</span>
+      <div style="flex:1">
+        <div style="font-weight:600;">${yer.ad}</div>
+        <div style="font-size:12px;color:var(--dim);">${yer.il} · ${yer.kategori}</div>
+      </div>
+      <div style="font-size:12px;color:var(--dim);">${z.tarih||''}</div>
+    </div>`;
+  }).join('') || '<div style="color:var(--dim);">Henüz ziyaret yok</div>';
+}
+
+// ── ROZETLER ──────────────────────────────────────────────────────────────
+const ROZETLER = [
+  { id:'ilk', ikon:'🏺', ad:'İlk Adım', aciklama:'İlk tarihi yeri ziyaret et', kontrol: (z,y) => z.length >= 1 },
+  { id:'gez5', ikon:'👣', ad:'Meraklı Gezgin', aciklama:'5 yer gez', kontrol: (z) => z.length >= 5 },
+  { id:'gez25', ikon:'🗺️', ad:'Deneyimli Gezgin', aciklama:'25 yer gez', kontrol: (z) => z.length >= 25 },
+  { id:'gez50', ikon:'🌟', ad:'Usta Gezgin', aciklama:'50 yer gez', kontrol: (z) => z.length >= 50 },
+  { id:'gez100', ikon:'🏆', ad:'Efsane Gezgin', aciklama:'100 yer gez', kontrol: (z) => z.length >= 100 },
+  { id:'tiyatro3', ikon:'🎭', ad:'Tiyatro Sever', aciklama:'3 antik tiyatro gez', kontrol: (z,y) => z.filter(v=>y.find(r=>r.id===v.yer_id)?.kategori==='antik tiyatro').length >= 3 },
+  { id:'tiyatro10', ikon:'🎪', ad:'Tiyatro Ustası', aciklama:'10 antik tiyatro gez', kontrol: (z,y) => z.filter(v=>y.find(r=>r.id===v.yer_id)?.kategori==='antik tiyatro').length >= 10 },
+  { id:'muze5', ikon:'🏛️', ad:'Müze Kurdu', aciklama:'5 müze gez', kontrol: (z,y) => z.filter(v=>y.find(r=>r.id===v.yer_id)?.kategori==='müze').length >= 5 },
+  { id:'antikkent10', ikon:'🏺', ad:'Antik Âşığı', aciklama:'10 antik kent gez', kontrol: (z,y) => z.filter(v=>y.find(r=>r.id===v.yer_id)?.kategori==='antik kent').length >= 10 },
+  { id:'kale5', ikon:'🏰', ad:'Kale Fatihi', aciklama:'5 kale gez', kontrol: (z,y) => z.filter(v=>y.find(r=>r.id===v.yer_id)?.kategori==='kale').length >= 5 },
+  { id:'gobeklitepe', ikon:'🗿', ad:'Zamanın Başlangıcı', aciklama:'Göbeklitepe\'yi ziyaret et', kontrol: (z,y) => z.some(v=>y.find(r=>r.id===v.yer_id)?.ad==='Göbeklitepe') },
+  { id:'efes', ikon:'⚡', ad:'Efes\'in İzinde', aciklama:'Efes Antik Kenti\'ni ziyaret et', kontrol: (z,y) => z.some(v=>y.find(r=>r.id===v.yer_id)?.ad==='Efes Antik Kenti') },
+  { id:'nemrut', ikon:'👑', ad:'Tanrıların Yanında', aciklama:'Nemrut Dağı\'nı ziyaret et', kontrol: (z,y) => z.some(v=>y.find(r=>r.id===v.yer_id)?.ad==='Nemrut Dağı') },
+  { id:'il3', ikon:'🚗', ad:'Gezgin Yolcu', aciklama:'3 farklı ilde yer gez', kontrol: (z,y) => new Set(z.map(v=>y.find(r=>r.id===v.yer_id)?.il).filter(Boolean)).size >= 3 },
+  { id:'il7', ikon:'✈️', ad:'7 Bölge Gezgini', aciklama:'7 farklı ilde yer gez', kontrol: (z,y) => new Set(z.map(v=>y.find(r=>r.id===v.yer_id)?.il).filter(Boolean)).size >= 7 },
+];
+
+function renderRozetler() {
+  document.getElementById('rozet-grid').innerHTML = ROZETLER.map(r => {
+    const kazanildi = r.kontrol(ziyaretler, tumYerler);
+    return `<div class="rozet ${kazanildi ? 'kazanildi' : 'kazanilmadi'}">
+      <div class="rozet-icon">${r.ikon}</div>
+      <div>
+        <div class="rozet-ad">${r.ad}</div>
+        <div class="rozet-aciklama">${r.aciklama}</div>
+        ${kazanildi ? '<div style="color:var(--gold2);font-size:11px;margin-top:4px;">✓ Kazanıldı!</div>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── ROTALAR ───────────────────────────────────────────────────────────────
+function renderRotalar() {
+  document.getElementById('rota-list').innerHTML = rotalar.length ? rotalar.map(r => {
+    const yerIds = r.yer_idleri || [];
+    const yerAdlari = yerIds.map(id => tumYerler.find(y=>y.id===id)?.ad).filter(Boolean);
+    return `<div class="rota-card">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div>
+          <div class="rota-ad">🧭 ${r.ad}</div>
+          <div class="rota-meta">${yerIds.length} durak · ${r.aciklama||''}</div>
+        </div>
+        <button onclick="rotaSil(${r.id})" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:18px;">🗑️</button>
+      </div>
+      <div class="rota-yerler">
+        ${yerAdlari.map((ad,i) => `<span class="rota-yer-tag">${i+1}. ${ad}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--dim);text-align:center;padding:40px;">Henüz rota oluşturulmadı</div>';
+}
+
+function yeniRotaAc() {
+  seciliRotaYerler = [];
+  document.getElementById('rota-ad').value = '';
+  document.getElementById('rota-aciklama').value = '';
+  document.getElementById('rota-yer-secim').innerHTML = tumYerler.map(y =>
+    `<div onclick="rotaYerToggle(${y.id}, this)" style="padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:4px;border:1px solid var(--border);transition:all .2s;" id="rota-yer-${y.id}">
+      ${katIkon[y.kategori]||''} ${y.ad} <span style="color:var(--dim);font-size:11px;">· ${y.il}</span>
+    </div>`
+  ).join('');
+  openModal('rotaModal');
+}
+
+function rotaYerToggle(yerId, el) {
+  const idx = seciliRotaYerler.indexOf(yerId);
+  if (idx === -1) {
+    seciliRotaYerler.push(yerId);
+    el.style.background = 'rgba(201,168,76,.2)';
+    el.style.borderColor = 'var(--gold)';
+    el.innerHTML += ` <span style="color:var(--gold);font-weight:700;">${seciliRotaYerler.length}</span>`;
+  } else {
+    seciliRotaYerler.splice(idx, 1);
+    el.style.background = '';
+    el.style.borderColor = 'var(--border)';
+    // Numaraları güncelle
+    renderRotaSecim();
+  }
+}
+
+function renderRotaSecim() {
+  document.querySelectorAll('[id^="rota-yer-"]').forEach(el => {
+    const yerId = parseInt(el.id.replace('rota-yer-',''));
+    const idx = seciliRotaYerler.indexOf(yerId);
+    if (idx !== -1) {
+      el.style.background = 'rgba(201,168,76,.2)';
+      el.style.borderColor = 'var(--gold)';
+    } else {
+      el.style.background = '';
+      el.style.borderColor = 'var(--border)';
+    }
+  });
+}
+
+async function rotaKaydet() {
+  const ad = document.getElementById('rota-ad').value.trim();
+  if (!ad) { alert('Rota adı girin'); return; }
+  const yeni = {
+    user_id: currentUser.id,
+    ad,
+    aciklama: document.getElementById('rota-aciklama').value,
+    yer_idleri: seciliRotaYerler
+  };
+  const res = await sbFetch('rotalar', 'POST', yeni);
+  if (res) {
+    rotalar.push({ ...yeni, id: Date.now() });
+    renderRotalar();
+    closeModal('rotaModal');
+  }
+}
+
+async function rotaSil(id) {
+  if (!confirm('Bu rotayı silmek istiyor musunuz?')) return;
+  await sbFetch('rotalar?id=eq.' + id, 'DELETE');
+  rotalar = rotalar.filter(r => r.id !== id);
+  renderRotalar();
+}
+
+// ── YER DETAY ─────────────────────────────────────────────────────────────
+function yerDetay(yerId) {
+  const yer = tumYerler.find(y => y.id === yerId);
+  if (!yer) return;
+  modalYerId = yerId;
+  const gezildi = gezildiMi(yerId);
+  document.getElementById('modal-yer-ad').textContent = (katIkon[yer.kategori]||'') + ' ' + yer.ad;
+  const ziy = ziyaretler.find(z => z.yer_id === yerId);
+  document.getElementById('modal-yer-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div style="padding:12px;background:var(--card2);border-radius:8px;">
+        <div style="font-size:11px;color:var(--dim);">KATEGORİ</div>
+        <div style="font-weight:600;margin-top:4px;">${katIkon[yer.kategori]||''} ${yer.kategori}</div>
+      </div>
+      <div style="padding:12px;background:var(--card2);border-radius:8px;">
+        <div style="font-size:11px;color:var(--dim);">DÖNEM</div>
+        <div style="font-weight:600;margin-top:4px;color:var(--purple);">⏳ ${yer.donem||'Belirsiz'}</div>
+      </div>
+      <div style="padding:12px;background:var(--card2);border-radius:8px;">
+        <div style="font-size:11px;color:var(--dim);">KONUM</div>
+        <div style="font-weight:600;margin-top:4px;">📍 ${yer.il}${yer.ilce?', '+yer.ilce:''}</div>
+      </div>
+      <div style="padding:12px;background:var(--card2);border-radius:8px;">
+        <div style="font-size:11px;color:var(--dim);">ÖNEM</div>
+        <div style="font-weight:600;margin-top:4px;">${'⭐'.repeat(yer.onem||1)}</div>
+      </div>
+    </div>
+    <div style="padding:14px;background:var(--card2);border-radius:8px;margin-bottom:16px;line-height:1.6;font-size:14px;">
+      ${yer.aciklama||'Açıklama mevcut değil.'}
+    </div>
+    ${gezildi ? `
+      <div style="padding:12px;background:rgba(61,186,124,.1);border:1px solid var(--green);border-radius:8px;margin-bottom:16px;">
+        <div style="color:var(--green);font-weight:600;">✓ Bu yeri gezdiniz!</div>
+        ${ziy?.tarih ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">Ziyaret tarihi: ${ziy.tarih}</div>` : ''}
+      </div>
+    ` : ''}
+    ${yer.wikipedia_url ? `<a href="${yer.wikipedia_url}" target="_blank" style="color:var(--blue);font-size:13px;">📖 Wikipedia'da gör →</a>` : ''}
+    <div style="margin-top:16px;">
+      <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:6px;">ZİYARET TARİHİ (opsiyonel)</label>
+      <input type="date" id="modal-tarih" value="${ziy?.tarih||''}" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+    </div>
+  `;
+  const btn = document.getElementById('modal-gezildi-btn');
+  btn.textContent = gezildi ? '✕ Gezildi İşaretini Kaldır' : '✓ Gezildi İşaretle';
+  btn.style.background = gezildi ? 'var(--red)' : 'var(--green)';
+  openModal('yerModal');
+
+  // Haritada vurgula
+  if (markers[yerId]) {
+    map?.setView([yer.lat, yer.lng], 12);
+    markers[yerId].openPopup();
+  }
+}
+
+async function gezildiToggle(yerId) {
+  const gezildi = gezildiMi(yerId);
+  if (gezildi) {
+    const ziy = ziyaretler.find(z => z.yer_id === yerId);
+    await sbFetch('ziyaretler?id=eq.' + ziy.id, 'DELETE');
+    ziyaretler = ziyaretler.filter(z => z.yer_id !== yerId);
+  } else {
+    const yeni = { user_id: currentUser.id, yer_id: yerId, tarih: new Date().toISOString().slice(0,10) };
+    const res = await sbFetch('ziyaretler', 'POST', yeni);
+    if (res && res[0]) ziyaretler.push(res[0]);
+    else ziyaretler.push({ ...yeni, id: Date.now() });
+  }
+  renderYerler();
+  renderHarita();
+  renderMiniStats();
+}
+
+async function modalGezildiToggle() {
+  if (!modalYerId) return;
+  const tarih = document.getElementById('modal-tarih')?.value || new Date().toISOString().slice(0,10);
+  const gezildi = gezildiMi(modalYerId);
+  if (gezildi) {
+    const ziy = ziyaretler.find(z => z.yer_id === modalYerId);
+    await sbFetch('ziyaretler?id=eq.' + ziy.id, 'DELETE');
+    ziyaretler = ziyaretler.filter(z => z.yer_id !== modalYerId);
+  } else {
+    const yeni = { user_id: currentUser.id, yer_id: modalYerId, tarih };
+    const res = await sbFetch('ziyaretler', 'POST', yeni);
+    if (res && res[0]) ziyaretler.push(res[0]);
+    else ziyaretler.push({ ...yeni, id: Date.now() });
+  }
+  renderYerler();
+  renderHarita();
+  renderMiniStats();
+  closeModal('yerModal');
+}
+
+function filterByIl(il) {
+  showPage('yerler');
+  document.getElementById('yer-arama').value = il;
+  renderYerler();
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`.nav-link[onclick*="${page}"]`)?.classList.add('active');
+
+  if (page === 'kesfet') { renderHarita(); renderMiniStats(); }
+  if (page === 'yerler') renderYerler();
+  if (page === 'profil') renderProfil();
+  if (page === 'rozetler') renderRozetler();
+  if (page === 'rotalar') renderRotalar();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(o => o.classList.remove('open'));
+});
+
+// ── BAŞLAT ────────────────────────────────────────────────────────────────
+oturumKontrol();
+</script>
+</body>
+</html>
